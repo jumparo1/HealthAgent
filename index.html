@@ -110,6 +110,7 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
 <body>
 <div class="app">
   <h1><span>🏥</span> Здравен Агент</h1>
+  <div id="sync-status" style="font-size:12px;margin:-10px 0 10px;"></div>
 
   <div class="tabs">
     <button class="tab active" onclick="go('log')">📝 Дневник</button>
@@ -993,5 +994,11 @@ renderLog();
 /* PWA Service Worker */
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){});}
 </script>
+
+<!-- Firebase SDK (compat, no build tools needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-sync.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-const CACHE = 'ha-v1';
-const SHELL = ['./', 'manifest.json'];
+const CACHE = 'ha-v2';
+const SHELL = ['./', 'manifest.json', 'firebase-sync.js'];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(SHELL); }));
