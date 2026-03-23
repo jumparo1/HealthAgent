@@ -97,6 +97,14 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
 .chat-typing{color:var(--text2);font-size:12px;font-style:italic;padding:4px 0}
 
 .empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
+
+/* Docs */
+.doc-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s}
+.doc-item:hover{border-color:var(--blue)}
+.doc-icon{font-size:28px;flex-shrink:0}
+.doc-info{flex:1;min-width:0}
+.doc-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-meta{font-size:11px;color:var(--text2);margin-top:2px}
 </style>
 </head>
 <body>
@@ -107,6 +115,7 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
     <button class="tab active" onclick="go('log')">📝 Дневник</button>
     <button class="tab" onclick="go('food')">🥗 Храни</button>
     <button class="tab" onclick="go('health')">🧬 Здраве</button>
+    <button class="tab" onclick="go('docs')">📄 Документи</button>
     <button class="tab" onclick="go('chat')">💬 AI Чат</button>
     <button class="tab" onclick="go('history')">📅 История</button>
   </div>
@@ -178,6 +187,19 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
     <div class="card" id="tests-list"></div>
     <div class="section-label">Профил</div>
     <div class="card" id="profile-info"></div>
+  </div>
+
+  <!-- ═══ DOCUMENTS ═══ -->
+  <div class="page" id="p-docs">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-label" style="margin:0">Моите документи</div>
+      <label class="btn btn-go" style="cursor:pointer">📎 Качи файл
+        <input type="file" id="doc-upload" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple style="display:none" onchange="uploadDocs(this.files)">
+      </label>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:12px">Изследвания, диети, протоколи (PDF, снимки). Файловете се пазят в браузъра.</div>
+    <div id="docs-list"></div>
+    <div class="empty" id="docs-empty" style="display:none">Няма качени документи.<br>Натисни "📎 Качи файл" за да добавиш.</div>
   </div>
 
   <!-- ═══ AI CHAT ═══ -->
@@ -408,7 +430,7 @@ function go(tab){
   document.getElementById('p-'+tab).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelector('.tab[onclick="go(\''+tab+'\')"]').classList.add('active');
-  var r={log:renderLog,food:renderFood,health:renderHealth,chat:renderChat,history:renderHistory};
+  var r={log:renderLog,food:renderFood,health:renderHealth,docs:renderDocs,chat:renderChat,history:renderHistory};
   if(r[tab])r[tab]();
 }
 
@@ -646,7 +668,7 @@ var AGENT_TOOLS = [
     description: 'Switch the UI to a specific tab to show the user their data',
     input_schema: {
       type: 'object',
-      properties: { page:{type:'string',enum:['log','food','health','history']} },
+      properties: { page:{type:'string',enum:['log','food','health','docs','history']} },
       required: ['page']
     }
   }
@@ -887,6 +909,71 @@ function toolActionLabel(name, input){
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   DOCUMENTS (IndexedDB storage for PDFs & images)
+   ═══════════════════════════════════════════════════════════════ */
+var docsDB=null;
+function openDocsDB(){
+  return new Promise(function(resolve,reject){
+    if(docsDB){resolve(docsDB);return;}
+    var req=indexedDB.open('ha_docs',1);
+    req.onupgradeneeded=function(e){e.target.result.createObjectStore('files',{keyPath:'id'});};
+    req.onsuccess=function(e){docsDB=e.target.result;resolve(docsDB);};
+    req.onerror=function(){reject(req.error);};
+  });
+}
+
+async function uploadDocs(files){
+  if(!files||!files.length)return;
+  var idb=await openDocsDB();
+  var docs=db('docs');
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    var id='doc_'+Date.now()+'_'+i;
+    var buf=await f.arrayBuffer();
+    var tx=idb.transaction('files','readwrite');
+    tx.objectStore('files').put({id:id,data:buf,type:f.type,name:f.name});
+    docs.push({id:id,name:f.name,type:f.type,size:f.size,date:today()});
+  }
+  dbSave('docs',docs);
+  document.getElementById('doc-upload').value='';
+  renderDocs();
+}
+
+function renderDocs(){
+  var docs=db('docs');
+  var el=document.getElementById('docs-list');
+  var empty=document.getElementById('docs-empty');
+  if(!docs.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  el.innerHTML=docs.map(function(d){
+    var icon=d.type&&d.type.indexOf('pdf')>=0?'📄':'🖼️';
+    var sizeStr=d.size<1024?(d.size+'B'):d.size<1048576?((d.size/1024).toFixed(1)+'KB'):((d.size/1048576).toFixed(1)+'MB');
+    return '<div class="doc-item" onclick="viewDoc(\''+d.id+'\')"><div class="doc-icon">'+icon+'</div><div class="doc-info"><div class="doc-name">'+d.name+'</div><div class="doc-meta">'+fmtDate(d.date)+' · '+sizeStr+'</div></div><button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteDoc(\''+d.id+'\')">✕</button></div>';
+  }).join('');
+}
+
+async function viewDoc(id){
+  var idb=await openDocsDB();
+  var tx=idb.transaction('files','readonly');
+  var req=tx.objectStore('files').get(id);
+  req.onsuccess=function(){
+    if(!req.result){alert('Файлът не е намерен.');return;}
+    var blob=new Blob([req.result.data],{type:req.result.type});
+    var url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+  };
+}
+
+async function deleteDoc(id){
+  if(!confirm('Изтрий документа?'))return;
+  var idb=await openDocsDB();
+  var tx=idb.transaction('files','readwrite');
+  tx.objectStore('files').delete(id);
+  dbSave('docs',db('docs').filter(function(d){return d.id!==id;}));
+  renderDocs();
+}
+
+/* ═══════════════════════════════════════════════════════════════
    HISTORY + EXPORT
    ═══════════════════════════════════════════════════════════════ */
 function renderHistory(){
@@ -894,7 +981,7 @@ function renderHistory(){
   document.getElementById('all-logs').innerHTML=logs.length?logs.map(renderLogEntry).join(''):'<div class="empty">Няма записи все още.</div>';
 }
 function exportData(){
-  var data={logs:db('logs'),findings:db('findings'),meds:db('meds'),foods:db('foods'),tests:db('tests'),
+  var data={logs:db('logs'),findings:db('findings'),meds:db('meds'),foods:db('foods'),tests:db('tests'),docs:db('docs'),
     treatment:JSON.parse(localStorage.getItem('ha_treatment')||'{}'),profile:JSON.parse(localStorage.getItem('ha_profile')||'{}'),exported:new Date().toISOString()};
   var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='health-agent-'+today()+'.json';a.click();
