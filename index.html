@@ -98,6 +98,19 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
 
 .empty{text-align:center;padding:40px;color:var(--text2);font-size:13px}
 
+/* Shopping list */
+.sl-cat{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.sl-cat:first-child{border-top:none;margin-top:0;padding-top:0}
+.sl-item{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid rgba(42,42,69,0.2);font-size:13px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.sl-item:last-child{border-bottom:none}
+.sl-item.checked .sl-text{text-decoration:line-through;color:var(--text2)}
+.sl-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.sl-item.checked .sl-check{background:var(--green);border-color:var(--green);color:#000}
+.sl-text{flex:1}
+.sl-detail{font-size:11px;color:var(--text2)}
+.sl-progress{font-size:12px;color:var(--text2);margin-bottom:12px}
+.sl-progress span{color:var(--green);font-weight:600}
+
 /* Docs */
 .doc-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s}
 .doc-item:hover{border-color:var(--blue)}
@@ -117,6 +130,7 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
     <button class="tab" onclick="go('food')">🥗 Храни</button>
     <button class="tab" onclick="go('health')">🧬 Здраве</button>
     <button class="tab" onclick="go('docs')">📄 Документи</button>
+    <button class="tab" onclick="go('shop')">🛒 Списък</button>
     <button class="tab" onclick="go('chat')">💬 AI Чат</button>
     <button class="tab" onclick="go('history')">📅 История</button>
   </div>
@@ -222,6 +236,19 @@ label{display:block;font-size:11px;color:var(--text2);text-transform:uppercase;l
       Въведи Anthropic API ключ за AI отговори.
       <span style="cursor:pointer;color:var(--blue)" onclick="promptApiKey()">Задай API ключ</span>
     </div>
+  </div>
+
+  <!-- ═══ SHOPPING LIST ═══ -->
+  <div class="page" id="p-shop">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="section-label" style="margin:0">Списък за пазаруване</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="slUncheckAll()">↩ Нулирай</button>
+        <button class="btn btn-sm" onclick="slAddCustom()">+ Добави</button>
+      </div>
+    </div>
+    <div class="sl-progress" id="sl-progress"></div>
+    <div class="card" id="shop-list"></div>
   </div>
 
   <!-- ═══ HISTORY ═══ -->
@@ -419,6 +446,69 @@ if(!localStorage.getItem('ha_seeded_v3')){
   localStorage.setItem('ha_seeded_v3','1');
 }
 
+// Seed shopping list if not present
+if(!localStorage.getItem('ha_shoplist')){
+  dbSave('shoplist',[
+    // Добавки — Аптека / Онлайн
+    {id:'s1',text:'Алое Вера гел (биологичен, без алоин)',detail:'30-50 мл дневно сутрин',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s2',text:'Omni-Biotic 10 (пробиотик, 10 щама)',detail:'1 саше дневно',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s3',text:'Saccharomyces Boulardii + MOS (Jarrow)',detail:'5 млрд., 1 капс. с обяд',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s4',text:'Akkermansia (Herbamedicabg, 30 вег. капс.)',detail:'1 капс. преди сън',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s5',text:'K-Бутират постбиотик (Dietetica.bg)',detail:'1-2 капс. с вечеря',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s6',text:'L-Глутамин PRO Kyowa (500г прах)',detail:'5г дневно в хладка вода',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s7',text:'Омега-3 МаксПауър (EPA 700 / DHA 500)',detail:'2 капс. с обяд',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s8',text:'Витамин D3 + K2 Ionic Trace (59 мл)',detail:'4-5 капки сутрин с мазна храна',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s9',text:'Масло от риган Natural Factors (КАПСУЛИ!)',detail:'1 капс. с вечеря, спри при парене',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s10',text:'Колаген хидролизат Amix Pure Collagen',detail:'без аромат, 25г дневно',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s11',text:'Ashwagandha KSM-66 GreenDay ProVegan',detail:'60 вег. капс., 1 вечер',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    {id:'s12',text:'Solgar Chelated Magnesium (100 табл.)',detail:'1-2 табл. преди сън',cat:'💊 Добавки — Аптека / Онлайн',done:false},
+    // Месо & Риба
+    {id:'s13',text:'Пъстърва — 1 кг',detail:'сладководна риба',cat:'🐟 Месо & Риба',done:false},
+    {id:'s14',text:'Пилешки гърди — 500г',detail:'бяло месо, макс 3 дни/седм.',cat:'🐟 Месо & Риба',done:false},
+    {id:'s15',text:'Пуешко месо — 500г',detail:'',cat:'🐟 Месо & Риба',done:false},
+    {id:'s16',text:'Заешко месо — 500г',detail:'',cat:'🐟 Месо & Риба',done:false},
+    {id:'s17',text:'Яйца свободни кокошки — 20 бр.',detail:'2 кутии',cat:'🐟 Месо & Риба',done:false},
+    // Зеленчуци
+    {id:'s18',text:'Тиквички — 1 кг',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s19',text:'Броколи — 2 бр.',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s20',text:'Карфиол — 1 бр.',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s21',text:'Моркови — 1 кг',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s22',text:'Целина — 2 бр.',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s23',text:'Лук — 1 кг',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s24',text:'Чесън — 3 глави',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s25',text:'Цвекло — 500г',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s26',text:'Спанак — 2 пакета',detail:'',cat:'🥦 Зеленчуци',done:false},
+    {id:'s27',text:'Краставици — 3 бр.',detail:'обелени',cat:'🥦 Зеленчуци',done:false},
+    {id:'s28',text:'Магданоз — 3 връзки',detail:'суров в края на ястие',cat:'🥦 Зеленчуци',done:false},
+    // Плодове
+    {id:'s29',text:'Банани (узрели) — 1 кг',detail:'между хранения, НЕ след месо',cat:'🍎 Плодове',done:false},
+    {id:'s30',text:'Круши — 1 кг',detail:'обелени, меки',cat:'🍎 Плодове',done:false},
+    {id:'s31',text:'Ябълки — 1 кг',detail:'обелени в Intro, сурови в Full',cat:'🍎 Плодове',done:false},
+    {id:'s32',text:'Горски плодове — 500г',detail:'замразени ок',cat:'🍎 Плодове',done:false},
+    // Мазнини & Масла
+    {id:'s33',text:'Гхи (пречистено масло) — 1 буркан',detail:'за готвене',cat:'🫒 Мазнини & Масла',done:false},
+    {id:'s34',text:'Кокосово масло (студено пресовано)',detail:'за готвене',cat:'🫒 Мазнини & Масла',done:false},
+    {id:'s35',text:'Зехтин extra virgin — 1 бутилка',detail:'суров, не за готвене',cat:'🫒 Мазнини & Масла',done:false},
+    {id:'s36',text:'Конопено масло — 1 бутилка',detail:'',cat:'🫒 Мазнини & Масла',done:false},
+    // Ядки & Семена
+    {id:'s37',text:'Орехи — 200г',detail:'накисвай 12ч.',cat:'🥜 Ядки & Семена',done:false},
+    {id:'s38',text:'Тиквени семки — 200г',detail:'',cat:'🥜 Ядки & Семена',done:false},
+    {id:'s39',text:'Чиа семена — 200г',detail:'',cat:'🥜 Ядки & Семена',done:false},
+    {id:'s40',text:'Ленено семе — 200г',detail:'',cat:'🥜 Ядки & Семена',done:false},
+    // Напитки & Подправки
+    {id:'s41',text:'Кокосова вода — 6 бр.',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s42',text:'Кокосово мляко — 2 бр.',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s43',text:'Лимони — 5 бр.',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s44',text:'Куркума (прах)',detail:'+ черен пипер за бионаличност',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s45',text:'Черен пипер',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s46',text:'Розмарин',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s47',text:'Морска сол (келтска/хималайска)',detail:'',cat:'🥤 Напитки & Подправки',done:false},
+    {id:'s48',text:'Ябълков оцет — 1 бутилка',detail:'за бульон',cat:'🥤 Напитки & Подправки',done:false},
+    // GAPS Бульон
+    {id:'s49',text:'Ecolagen БИО бульон — 3 литра',detail:'revita.bg, пилешки+телешки, варен 24ч.',cat:'🍲 GAPS Бульон (поръчай онлайн)',done:false},
+  ]);
+}
+
 // API ключ се задава ръчно чрез бутона "🔑 API ключ"
 
 /* ═══════════════════════════════════════════════════════════════
@@ -431,7 +521,7 @@ function go(tab){
   document.getElementById('p-'+tab).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelector('.tab[onclick="go(\''+tab+'\')"]').classList.add('active');
-  var r={log:renderLog,food:renderFood,health:renderHealth,docs:renderDocs,chat:renderChat,history:renderHistory};
+  var r={log:renderLog,food:renderFood,health:renderHealth,docs:renderDocs,shop:renderShop,chat:renderChat,history:renderHistory};
   if(r[tab])r[tab]();
 }
 
@@ -938,6 +1028,58 @@ async function uploadDocs(files){
   dbSave('docs',docs);
   document.getElementById('doc-upload').value='';
   renderDocs();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHOPPING LIST
+   ═══════════════════════════════════════════════════════════════ */
+function renderShop(){
+  var items=db('shoplist');
+  var total=items.length, done=items.filter(function(i){return i.done}).length;
+  document.getElementById('sl-progress').innerHTML='<span>'+done+'</span> / '+total+' купени'+(done===total&&total>0?' ✅ Всичко е взето!':'');
+  var cats={};
+  items.forEach(function(it){if(!cats[it.cat])cats[it.cat]=[];cats[it.cat].push(it);});
+  var h='';
+  Object.keys(cats).forEach(function(cat){
+    h+='<div class="sl-cat">'+cat+'</div>';
+    cats[cat].forEach(function(it){
+      h+='<div class="sl-item'+(it.done?' checked':'')+'" onclick="slToggle(\''+it.id+'\')">';
+      h+='<div class="sl-check">'+(it.done?'✓':'')+'</div>';
+      h+='<div><div class="sl-text">'+it.text+'</div>';
+      if(it.detail)h+='<div class="sl-detail">'+it.detail+'</div>';
+      h+='</div>';
+      h+='<button class="btn btn-sm btn-del" onclick="event.stopPropagation();slRemove(\''+it.id+'\')" style="flex-shrink:0">✕</button>';
+      h+='</div>';
+    });
+  });
+  if(!items.length)h='<div class="empty">Списъкът е празен. Натисни "+ Добави" за да добавиш артикул.</div>';
+  document.getElementById('shop-list').innerHTML=h;
+}
+function slToggle(id){
+  var items=db('shoplist');
+  items.forEach(function(i){if(i.id===id)i.done=!i.done;});
+  dbSave('shoplist',items);
+  renderShop();
+}
+function slRemove(id){
+  var items=db('shoplist').filter(function(i){return i.id!==id});
+  dbSave('shoplist',items);
+  renderShop();
+}
+function slUncheckAll(){
+  var items=db('shoplist');
+  items.forEach(function(i){i.done=false;});
+  dbSave('shoplist',items);
+  renderShop();
+}
+function slAddCustom(){
+  var text=prompt('Какво да добавя в списъка?');
+  if(!text)return;
+  var cat=prompt('Категория (или остави празно):','🛒 Друго')||'🛒 Друго';
+  var items=db('shoplist');
+  items.push({id:'s_'+Date.now(),text:text,detail:'',cat:cat,done:false});
+  dbSave('shoplist',items);
+  renderShop();
 }
 
 function renderDocs(){

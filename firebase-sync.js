@@ -13,7 +13,7 @@ var FIREBASE_CONFIG = {
 };
 
 // Collections to sync (NOT synced: apikey, seeded_v3, docs)
-var SYNC_COLLECTIONS = ['logs','findings','meds','foods','tests','treatment','profile'];
+var SYNC_COLLECTIONS = ['logs','findings','meds','foods','tests','treatment','profile','shoplist'];
 
 var _fbApp = null;
 var _fbAuth = null;
@@ -135,7 +135,7 @@ function fbPullAll() {
   });
   // Re-render current tab
   setTimeout(function() {
-    var r = {log:renderLog,food:renderFood,health:renderHealth,docs:renderDocs,chat:renderChat,history:renderHistory};
+    var r = {log:renderLog,food:renderFood,health:renderHealth,docs:renderDocs,shop:renderShop,chat:renderChat,history:renderHistory};
     if (r[currentTab]) r[currentTab]();
   }, 1000);
 }
@@ -157,10 +157,10 @@ function fbStartListeners() {
               localStorage.setItem('ha_' + col, JSON.stringify(doc.data().items));
             }
             // Re-render if viewing this tab
-            var tabMap = {logs:'log',foods:'food',findings:'health',meds:'health',tests:'health',treatment:'health',profile:'health'};
+            var tabMap = {logs:'log',foods:'food',findings:'health',meds:'health',tests:'health',treatment:'health',profile:'health',shoplist:'shop'};
             var tab = tabMap[col];
             if (tab && tab === currentTab) {
-              var r = {log:renderLog,food:renderFood,health:renderHealth};
+              var r = {log:renderLog,food:renderFood,health:renderHealth,shop:renderShop};
               if (r[tab]) r[tab]();
             }
           }
